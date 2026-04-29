@@ -223,12 +223,15 @@ const WastagePrediction = () => {
               <p>
                 <strong>Input Quantity:</strong> {result.input_data.quantity} kg
               </p>
+              
+              {/*
               <p>
                 <strong>Predicted Wastage Amount:</strong>{' '}
                 <span style={{ color: '#e74c3c', fontSize: '1.3rem', fontWeight: 'bold' }}>
                   {result.wastage_amount.toFixed(2)} kg
                 </span>
               </p>
+              */}
               <p>
                 <strong>Wastage Percentage:</strong>{' '}
                 <span style={{ color: '#e74c3c', fontSize: '1.3rem', fontWeight: 'bold' }}>
