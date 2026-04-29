@@ -11,21 +11,40 @@ const Navbar = () => {
     navigate('/login');
   };
 
+  // ✅ Dynamic route based on role
+  const getDashboardRoute = () => {
+    if (user.role === 'ngo') return '/donations'; // main working screen
+    if (user.role === 'admin') return '/admin';
+    return '/dashboard'; // restaurant
+  };
+
+  // ✅ Dynamic label
+  const getDashboardLabel = () => {
+    if (user.role === 'ngo') return 'Browse Donations';
+    if (user.role === 'admin') return 'Admin Panel';
+    return 'Dashboard';
+  };
+
   return (
     <nav className="navbar">
       <div className="navbar-container">
-        <Link to="/dashboard" className="navbar-logo">
+        <Link to={user ? getDashboardRoute() : '/'} className="navbar-logo">
           <span className="logo-icon">🍽️</span>
-          <span className="logo-text">Food Waste<span className="logo-highlight">Management</span></span>
+          <span className="logo-text">
+            Food Waste<span className="logo-highlight">Management</span>
+          </span>
         </Link>
 
         <div className="navbar-menu">
           {user ? (
             <>
-              <Link to="/dashboard" className="nav-link">
+              {/* ✅ Single smart dashboard button */}
+              <Link to={getDashboardRoute()} className="nav-link">
                 <span className="nav-icon">📊</span>
-                Dashboard
+                {getDashboardLabel()}
               </Link>
+
+              {/* Restaurant-specific */}
               {user.role === 'restaurant' && (
                 <>
                   <Link to="/donations/create" className="nav-link">
@@ -38,22 +57,15 @@ const Navbar = () => {
                   </Link>
                 </>
               )}
-              {user.role === 'ngo' && (
-                <Link to="/donations" className="nav-link">
-                  <span className="nav-icon">🔍</span>
-                  Browse Donations
-                </Link>
-              )}
-              {user.role === 'admin' && (
-                <Link to="/admin" className="nav-link">
-                  <span className="nav-icon">⚙️</span>
-                  Admin Panel
-                </Link>
-              )}
+
+              {/* ❌ Removed NGO duplicate */}
+              {/* ❌ Removed Admin duplicate */}
 
               <div className="navbar-user">
                 <div className="user-info">
-                  <span className="user-avatar">{user.name.charAt(0).toUpperCase()}</span>
+                  <span className="user-avatar">
+                    {user.name.charAt(0).toUpperCase()}
+                  </span>
                   <span className="user-name">{user.name}</span>
                 </div>
                 <button onClick={handleLogout} className="btn-logout">
@@ -64,7 +76,9 @@ const Navbar = () => {
           ) : (
             <>
               <Link to="/login" className="nav-link">Login</Link>
-              <Link to="/register" className="nav-link btn-register">Get Started</Link>
+              <Link to="/register" className="nav-link btn-register">
+                Get Started
+              </Link>
             </>
           )}
         </div>

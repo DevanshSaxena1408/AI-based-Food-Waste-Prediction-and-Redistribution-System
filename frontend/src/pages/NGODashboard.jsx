@@ -3,8 +3,28 @@ import { useAuth } from '../context/AuthContext';
 import { donationAPI } from '../services/api';
 import DonationsMap from '../components/DonationsMap';
 
+// ✅ Haversine Distance Function
+const calculateDistance = (lat1, lon1, lat2, lon2) => {
+  const toRad = (value) => (value * Math.PI) / 180;
+
+  const R = 6371; // Earth radius in km
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) *
+      Math.cos(toRad(lat2)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+};
+
 const NGODashboard = () => {
   const { user } = useAuth();
+
   const [donations, setDonations] = useState([]);
   const [filteredDonations, setFilteredDonations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -17,7 +37,10 @@ const NGODashboard = () => {
     maxDistance: '',
   });
 
-  const [viewMode, setViewMode] = useState('list'); // 'list' or 'map'
+  const [viewMode, setViewMode] = useState('list');
+
+  // ✅ Selected donation from map
+  const [selectedDonation, setSelectedDonation] = useState(null);
 
   useEffect(() => {
     loadDonations();
@@ -26,6 +49,16 @@ const NGODashboard = () => {
   useEffect(() => {
     applyFilters();
   }, [donations, filters]);
+
+  // ✅ Auto-scroll to selected donation
+  useEffect(() => {
+    if (selectedDonation) {
+      const el = document.getElementById(`donation-${selectedDonation.id}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+  }, [selectedDonation]);
 
   const loadDonations = async () => {
     try {
@@ -39,25 +72,46 @@ const NGODashboard = () => {
     }
   };
 
+  // ✅ UPDATED FILTER LOGIC
   const applyFilters = () => {
     let filtered = [...donations];
 
-    // Filter by status
-    if (filters.status) {
-      filtered = filtered.filter(d => d.status === filters.status);
-    }
+    // ✅ Step 1: Calculate distance for each donation
+    if (user.latitude && user.longitude) {
+      filtered = filtered.map((d) => {
+        if (d.latitude && d.longitude) {
+          const distance = calculateDistance(
+            parseFloat(user.latitude),
+            parseFloat(user.longitude),
+            parseFloat(d.latitude),
+            parseFloat(d.longitude)
+          );
 
-    // Filter by distance
-    if (filters.maxDistance && user.latitude && user.longitude) {
-      filtered = filtered.filter(d => {
-        if (d.distance !== undefined) {
-          return d.distance <= parseFloat(filters.maxDistance);
+          return {
+            ...d,
+            distance: Number(distance.toFixed(2)),
+          };
         }
-        return true;
+        return d;
       });
     }
 
-    // Sort by distance
+    // ✅ Step 2: Filter by status
+    if (filters.status) {
+      filtered = filtered.filter((d) => d.status === filters.status);
+    }
+
+    // ✅ Step 3: Filter by max distance
+    if (filters.maxDistance) {
+      filtered = filtered.filter((d) => {
+        if (d.distance !== undefined) {
+          return d.distance <= parseFloat(filters.maxDistance);
+        }
+        return false;
+      });
+    }
+
+    // ✅ Step 4: Sort by distance
     filtered.sort((a, b) => {
       if (a.distance !== undefined && b.distance !== undefined) {
         return a.distance - b.distance;
@@ -102,7 +156,9 @@ const NGODashboard = () => {
   }
 
   const pendingCount = donations.filter(d => d.status === 'Pending').length;
-  const claimedCount = donations.filter(d => d.status === 'Accepted' && d.claimed_by === user.id).length;
+  const claimedCount = donations.filter(
+    d => d.status === 'Accepted' && d.claimed_by === user.id
+  ).length;
 
   return (
     <div className="container dashboard">
@@ -128,23 +184,24 @@ const NGODashboard = () => {
       <div className="filter-section">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
           <h3>Filter Donations</h3>
+
           <div style={{ display: 'flex', gap: '10px' }}>
             <button
               className={`btn ${viewMode === 'list' ? 'btn-primary' : 'btn-secondary'}`}
               onClick={() => setViewMode('list')}
-              style={{ padding: '0.5rem 1rem' }}
             >
               List View
             </button>
+
             <button
               className={`btn ${viewMode === 'map' ? 'btn-primary' : 'btn-secondary'}`}
               onClick={() => setViewMode('map')}
-              style={{ padding: '0.5rem 1rem' }}
             >
               Map View
             </button>
           </div>
         </div>
+
         <div className="filter-controls">
           <div>
             <label>Status: </label>
@@ -154,6 +211,7 @@ const NGODashboard = () => {
               <option value="Accepted">Accepted</option>
             </select>
           </div>
+
           <div>
             <label>Max Distance (km): </label>
             <input
@@ -170,6 +228,7 @@ const NGODashboard = () => {
 
       <div className="card">
         <h2>Available Food Donations</h2>
+
         {filteredDonations.length === 0 ? (
           <p>No donations available matching your filters.</p>
         ) : viewMode === 'map' ? (
@@ -181,28 +240,47 @@ const NGODashboard = () => {
                 : null
             }
             onDonationClick={(donation) => {
-              // Scroll to the donation card or show details
-              console.log('Clicked donation:', donation);
+              setSelectedDonation(donation);
+              setViewMode('list');
             }}
           />
         ) : (
           <div className="card-grid">
             {filteredDonations.map((donation) => (
-              <div key={donation.id} className="card donation-card">
+              <div
+                key={donation.id}
+                id={`donation-${donation.id}`}
+                className="card donation-card"
+                style={{
+                  border:
+                    selectedDonation?.id === donation.id
+                      ? '2px solid #007bff'
+                      : '1px solid #ddd',
+                  boxShadow:
+                    selectedDonation?.id === donation.id
+                      ? '0 0 10px rgba(0,123,255,0.5)'
+                      : 'none',
+                }}
+              >
                 {donation.image && (
                   <img src={donation.image} alt={donation.meal_name} />
                 )}
+
                 <div className="donation-info">
                   <h3>{donation.meal_name}</h3>
+
                   <p><strong>Quantity:</strong> {donation.quantity}</p>
                   <p><strong>Packaging:</strong> {donation.packaging_type}</p>
                   <p><strong>Expiry Date:</strong> {donation.expiry_date}</p>
                   <p><strong>Description:</strong> {donation.description}</p>
                   <p><strong>Location:</strong> {donation.address}</p>
+
                   {donation.distance !== undefined && (
                     <p><strong>Distance:</strong> {donation.distance} km</p>
                   )}
+
                   <p><strong>Donor:</strong> {donation.donor_name}</p>
+
                   {donation.donor_contact && (
                     <p><strong>Contact:</strong> {donation.donor_contact}</p>
                   )}

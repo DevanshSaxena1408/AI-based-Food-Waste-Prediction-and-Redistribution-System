@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import LocationPicker from '../components/LocationPicker';
 import { getLocationWithAddress } from '../utils/geolocation';
+import { reverseGeocode } from '../utils/geolocation';
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -68,13 +69,28 @@ const Register = () => {
     });
   };
 
-  const handleLocationChange = (lat, lng) => {
-    setFormData({
-      ...formData,
-      latitude: lat.toString(),
-      longitude: lng.toString(),
-    });
-  };
+  const handleLocationChange = async (lat, lng) => {
+  // Update coordinates
+  setFormData(prev => ({
+    ...prev,
+    latitude: lat.toString(),
+    longitude: lng.toString(),
+  }));
+
+  try {
+    // Fetch address from coordinates
+    const address = await reverseGeocode(lat, lng);
+
+    setFormData(prev => ({
+      ...prev,
+      address: address,
+    }));
+
+    setLocationDetected(true);
+  } catch (err) {
+    console.error('Reverse geocode failed:', err);
+  }
+};
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -172,7 +188,6 @@ const Register = () => {
             <select name="role" value={formData.role} onChange={handleChange} required>
               <option value="restaurant">Restaurant Owner / Donor</option>
               <option value="ngo">NGO</option>
-              <option value="admin">Admin</option>
             </select>
           </div>
 

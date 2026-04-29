@@ -67,6 +67,10 @@ class DonationResponse(DonationCreate):
     claimed_by: Optional[str] = None
     claimed_by_name: Optional[str] = None
 
+    donor_name: Optional[str] = None
+    donor_email: Optional[str] = None
+    donor_contact: Optional[str] = None
+
 class DonationClaim(BaseModel):
     donation_id: str
     ngo_id: str

@@ -42,6 +42,7 @@ const DonationsMap = ({ donations, userLocation, onDonationClick }) => {
 
   return (
     <div style={{ marginTop: '20px' }}>
+      {/* Legend */}
       <div style={{ marginBottom: '10px', padding: '10px', background: '#f8f9fa', borderRadius: '4px' }}>
         <p style={{ margin: '5px 0' }}>
           <span style={{ display: 'inline-block', width: '20px', height: '20px', background: '#28a745', borderRadius: '50%', marginRight: '10px' }}></span>
@@ -59,11 +60,11 @@ const DonationsMap = ({ donations, userLocation, onDonationClick }) => {
         style={{ height: '500px', width: '100%', borderRadius: '8px' }}
       >
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          attribution='&copy; OpenStreetMap contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
-        {/* User location marker (if provided) */}
+        {/* User location marker */}
         {userLocation && (
           <Marker position={userLocation}>
             <Popup>
@@ -78,28 +79,26 @@ const DonationsMap = ({ donations, userLocation, onDonationClick }) => {
             key={donation.id}
             position={{ lat: donation.latitude, lng: donation.longitude }}
             icon={donation.status === 'Pending' ? pendingIcon : acceptedIcon}
-            eventHandlers={{
-              click: () => {
-                if (onDonationClick) {
-                  onDonationClick(donation);
-                }
-              },
-            }}
           >
             <Popup>
               <div style={{ minWidth: '200px' }}>
                 <h3 style={{ marginBottom: '10px' }}>{donation.meal_name}</h3>
+
                 <p><strong>Quantity:</strong> {donation.quantity}</p>
                 <p><strong>Expiry:</strong> {donation.expiry_date}</p>
                 <p><strong>Donor:</strong> {donation.donor_name}</p>
+
                 {donation.distance !== undefined && (
                   <p><strong>Distance:</strong> {donation.distance} km</p>
                 )}
+
                 <p>
                   <span className={`donation-status status-${donation.status.toLowerCase()}`}>
                     {donation.status}
                   </span>
                 </p>
+
+                {/* ✅ Only this triggers navigation */}
                 {donation.status === 'Pending' && (
                   <button
                     className="btn btn-success"
