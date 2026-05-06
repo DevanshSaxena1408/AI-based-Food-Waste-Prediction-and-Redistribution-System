@@ -60,18 +60,20 @@ export const reverseGeocode = async (latitude, longitude) => {
   try {
     const now = Date.now();
 
-    // 🔥 Rate limit (important for Nominatim)
+    // 🔥 Nominatim rate limit (VERY IMPORTANT)
     if (now - lastRequestTime < 2000) {
       return `Lat: ${latitude.toFixed(6)}, Lng: ${longitude.toFixed(6)}`;
     }
 
     lastRequestTime = now;
 
-    const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`;
+    const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`;
 
     const response = await fetch(url, {
       headers: {
         'Accept': 'application/json',
+        // 🔥 REQUIRED for Nominatim (prevents blocking)
+        'User-Agent': 'FoodWasteApp/1.0 (vineetkumar2044@gmail.com)',
       },
     });
 
@@ -79,22 +81,26 @@ export const reverseGeocode = async (latitude, longitude) => {
       throw new Error(`Geocode failed: ${response.status}`);
     }
 
-    // 🔥 SAFER parsing (prevents crash)
+    // 🔥 SAFE parsing (prevents crashes like your previous error)
     const text = await response.text();
 
-    // If API returns HTML or empty → prevent crash
     if (!text || text.trim().startsWith("<")) {
       throw new Error("Invalid response (HTML instead of JSON)");
     }
 
-    const data = JSON.parse(text);
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (err) {
+      throw new Error("JSON parsing failed");
+    }
 
     return data.display_name || "Address not found";
 
   } catch (error) {
     console.error("Reverse geocoding error:", error);
 
-    // fallback (never crash UI)
+    // 🔥 Always return fallback (never break UI)
     return `Lat: ${latitude.toFixed(6)}, Lng: ${longitude.toFixed(6)}`;
   }
 };
